@@ -1,0 +1,11 @@
+#!/bin/dash
+
+#CHECK IF .legit DIRECTORY EXISTS
+if [ ! -d ".legit"] > /dev/null 2>&1;
+then
+    echo "legit-rm: error: no .legit directory containing legit repository exists" >&2;
+    exit 1;
+
+if [ $# gt 3 ];
+then
+    echo "

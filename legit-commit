@@ -1,0 +1,132 @@
+#!/bin/dash
+
+flag=0;
+
+#CHECK IF .legit DIRECTORY EXISTS
+if [ ! -d ".legit"] > /dev/null 2>&1;
+then
+    echo "legit-commit: error: no .legit directory containing legit repository exists" >&2;
+    exit 1;
+else
+#CHECK IF ARGUMENT INPUT IS CORRECT
+
+    if [ $# -eq 3 ];
+    then
+        if ([ $1 = '-a' ] && [ $2 = '-m' ]);
+        then
+            flag=1;
+        else
+            echo "usage: legit-commit [-a] -m commit-message" >&2;
+            exit 1;
+        fi
+
+    elif (test $# -lt 2) || (test $# -gt 3);
+    then
+        echo "usage: legit-commit [-a] -m commit-message" >&2;
+        exit 1;
+    elif [ $# -eq 2 ]
+    then
+        if [ ! $1 = '-m' ]
+        then
+            echo "usage: legit-commit [-a] -m commit-message" >&2;
+        fi
+    fi
+fi
+
+#INITIALISE SOME VARIABLES
+directory="$(pwd)";
+message=$2;
+
+if [ $flag -eq 1 ] #If the -a -m args are given
+then
+       
+       #Consider removal from working dir -> diff will give ONLY IN INDEX if this happens
+       #If updated, CHANGE lines will tell you what changed.
+       #IGNORE only in working dir (means wasn't added).
+    diff -qr $directory $directory/.legit/index | sort | egrep "^Only.+index.+" | cut -d' ' -f4 > $directory/.legit/1.txt;
+    diff -qr $directory $directory/.legit/index | sort | egrep "^Files.+" | cut -d' ' -f2 >> $directory/.legit/1.txt;
+   
+   input="$directory/.legit/1.txt";
+   while read line; do
+   echo $line > $directory/.legit/line.txt; 
+   if (egrep -q "/" $directory/.legit/line.txt);
+   then
+       fileToCopy=$(basename "$line");
+       cp $directory/$fileToCopy $directory/.legit/index;
+   else
+       rm -rf $directory/.legit/index/$line;
+   fi
+
+   done < "$input";
+    
+   rm -rf $directory/.legit/1.txt;
+fi
+   
+
+#CHECK IF INDEX IS EMPTY
+if ls -1 $directory/.legit/index/* >/dev/null 2>&1
+then
+    continue;
+else
+    echo "nothing to commit";
+    exit 1;
+fi
+   
+if [ -f $directory/.legit/log.txt ]; #Checks if log file exists (to determine if first commit or not).
+then                                 
+    x=$(cut -d' ' -f1 $directory/.legit/log.txt | head -n 1); #Extracts last commit number
+
+    #-Results of diff that would lead to a commit occuring are stored in variables.
+      #a) If a file is only in index dir and not previous commit, OnlyinIndex will contain some text. Otherwise will be empty.
+      #b) If a particular file in index dir has been changed, ChangedFiles will contain some text.Otherwise will be empty.
+      
+    OnlyinIndex=$(diff -qr $directory/.legit/commit/$x $directory/.legit/index | sort | egrep "Only.+index.+");
+    ChangedFiles=$(diff -qr .legit/commit/$x $directory/.legit/index | egrep "^Files.+");
+
+
+    if ([ "$OnlyinIndex" != "" ] || [ "$ChangedFiles" != "" ]); #Checks if either variables contain text or are blank.
+    then                                                        #If either AREN'T blank, we need to commit.
+	    y=$x;             #Store previous commit number
+        x=$((x+1));       #Increase to current commit number
+        
+	    mkdir $directory/.legit/commit/$x;  #Create new directory for the commit
+	    
+	    for FILES in $directory/.legit/commit/$y/*; #Copies previous commit's files into new commit dir
+	    do 
+	        cp $FILES $directory/.legit/commit/$x;
+	    done;
+
+	for FILE in $directory/.legit/index/*;  #Copies files in index to current commit dir
+	do 
+	    cp $FILE $directory/.legit/commit/$x;
+	    
+	done;
+
+	echo $x $message>>$directory/.legit/log.txt;   #Store commit no. and message into log file.
+	sort -r $directory/.legit/log.txt > $directory/.legit/log1.txt;  #Makes most recent commits first
+	cat $directory/.legit/log1.txt > $directory/.legit/log.txt;      #
+	rm $directory/.legit/log1.txt;                                   #
+	
+	echo "Committed as commit $x"; 
+    
+    
+    else      #variables results were blank
+        echo "nothing to commit";
+        exit 1;
+    fi
+
+else        #First Commit
+    echo "0 $message" > $directory/.legit/log.txt;   #Create log file
+    mkdir $directory/.legit/commit/0/;         #Create new dir for the commit.
+    for FILE in $directory/.legit/index/*;   #Move files in index to current commit dir
+    do                                       #
+        cp $FILE $directory/.legit/commit/0; #
+                                    
+    done;
+    echo "Committed as commit 0"; 
+fi  
+    
+
+
+
+

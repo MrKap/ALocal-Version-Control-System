@@ -1,0 +1,82 @@
+#!/bin/dash
+
+#Checking .legit exists
+if [ ! -d ".legit" ];
+then
+    echo "legit-add: error: no .legit directory containing legit repository exists" >&2;
+    exit 1;
+fi
+
+#Checking if arguments were given
+if test $# -eq 0;
+then
+    echo "usage: legit-add <filenames>" >&2;
+    exit 1;
+fi
+
+#initialising some variables
+count=1;
+x=1;
+y=$1;
+directory="$(pwd)";
+emptyFlag=0;
+
+#See if index is empty
+if [ ! "$(ls -A $directory/.legit/index)" ]
+then
+    emptyFlag=1;
+else
+    cp -r $directory/.legit/index $directory/.legit/tempIndex; #Create snapshot of index if it's not empty.
+fi
+
+
+while test $x -le $#;  #loops through all args and copies each file into index directory
+do
+    valid=$(echo $y | egrep "[A-Za-z0-9\._-]");  #Filters only valid names (empty if not valid)
+    if [ $valid != "" ]
+    then
+        :
+    else
+        echo "legit-add: error: invalid filename '$y'" >&2;
+        rm -rf $directory/.legit/index;   #Undo additions to index by deleting it
+        mkdir $directory/.legit/index;    #remake index
+        
+        if [ $emptyFlag -eq 0 ];
+        then
+           cp -r $directory/.legit/tempIndex/* $directory/.legit/index; #restore index snapshot
+        fi
+        exit 1;
+    fi
+    
+    if [ ! -f $y ];   #if file given as arg doesn't exist
+    then                
+        echo "legit-add: error: can not open '"$y"'" >&2;
+        rm -rf $directory/.legit/index;    #Undo additions to index by deleting it
+        mkdir $directory/.legit/index;     #remake index
+        
+        if [ $emptyFlag -eq 0 ];
+        then
+            cp -r $directory/.legit/tempIndex/* $directory/.legit/index; #restore index snapshot
+        fi
+        exit 1;
+    else 
+        cp $y $directory/.legit/index;       #copy file to index dir
+        x=$((x + 1));      #increment the arg count.
+        
+        for f in "$@";     #loop to SELECT the next file arg which will be added and stores it in y.
+	    do
+	        if test $count -lt $x;
+		    then count=$((count + 1));
+	            continue;
+            else
+                y=$f;
+                count=1;
+	            break;
+	        fi
+        done
+    fi
+done
+
+rm -rf $directory/.legit/tempIndex; #remove snapshot of index
+
+

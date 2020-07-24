@@ -1,0 +1,86 @@
+#!/bin/dash
+
+directory="$(pwd)";
+
+#Error if .legit doesnt exist.
+if [ ! -d ".legit" ]
+then
+    echo "legit-show: error: no .legit directory containing legit repository exists" >&2;
+    exit 1;
+fi
+
+#Error if the text file containing any commits doesnt exist.
+if [ ! -f $directory/.legit/"log.txt" ]
+then
+    echo "legit-show: error: your repository does not have any commits yet" >&2;
+    exit 1;
+fi
+
+#Error if there isn't only 1 argument
+if [ $# -ne 1 ]
+then
+    echo "usage: legit-show <commit>:<filename>" >&2;
+    exit 1;
+fi
+
+
+
+containSemiColon=$(echo $1 | egrep ':');
+arg=$1;
+
+#gets the part to the left of the ':' in the argument
+commit=${arg%":"*};
+
+#gets the part to the right of the ':' in the argument
+file=${arg#*":"};
+
+
+#Error if no semi colon in the argument
+if [ ! $containSemiColon ];
+then
+    echo "legit-show: error: invalid object $1" >&2;
+    exit 1;
+fi
+
+#If nothing was given before ':' in the arg
+if [ ! $commit ];
+then
+    #Checks whether the right of the ':' in arg, exists in index
+    if [ ! -f "$directory/.legit/index/$file" ]
+    then
+        echo "legit-show: error: '$file' not found in index" >&2;
+        exit 1;
+    else
+        cat "$directory/.legit/index/$file"; #Display the file
+        exit;
+    fi
+fi
+
+#Checks if the left of the ':' in the arg exists as a commit.
+if [ ! -d "$directory/.legit/commit/$commit" ]
+then
+    echo "legit-show: error: unknown commit '$commit'" >&2;
+    exit 1;
+
+#Checks if the right of the ':' in arg exists as a file in the given commit.
+elif [ ! -f "$directory/.legit/commit/$commit/$file" ];
+then
+    echo "legit-show: error: '$file' not found in commit $commit" >&2;
+    exit 1;
+
+#When left of ':' in arg is given, but nothing is on the right of the ':' in arg
+elif [ $commit ] && [ ! $file ];
+then
+    echo "legit-show: error: invalid filename ''" >&2;
+
+#If none of the errors above, display the file.   
+else
+    cat "$directory/.legit/commit/$commit/$file";
+fi
+
+
+ 
+    
+    
+    
+    

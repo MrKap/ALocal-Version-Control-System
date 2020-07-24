@@ -1,0 +1,25 @@
+#!/bin/dash
+
+directory="$(pwd)";
+
+#Check if .legit exists
+if [ ! -d ".legit" ]
+then
+    echo "legit-log: error: no .legit directory containing legit repository exists" >&2;
+    exit 1;
+
+#Check if any commits have occured.
+elif [ ! -f $directory/.legit/log.txt ]
+then
+    echo "legit-log: error: your repository does not have any commits yet" >&2;
+    exit 1;
+    
+#Check there aren't any arguments
+elif [ $# -ne 0 ]
+then
+    echo "usage: legit-log" >&2;
+    exit 1;
+    
+else
+    cat $directory/.legit/log.txt;  #Print log file
+fi

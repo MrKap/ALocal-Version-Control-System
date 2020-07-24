@@ -1,0 +1,19 @@
+#!/bin/dash
+
+if test $# = 0   #check if no arguments
+then 
+    if [ -d ".legit" ] #check if .legit exists
+    then   
+        echo "legit-init: error: .legit already exists" >&2;
+        exit 1;
+    else                 #make the directories needed
+        mkdir .legit; 
+        cd .legit;
+        mkdir index;
+        mkdir commit;
+        echo "Initialized empty legit repository in .legit" >&2;
+    fi
+else
+   echo "usage: legit-init" >&2;
+   exit 1;
+fi
